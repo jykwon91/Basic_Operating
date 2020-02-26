@@ -1,9 +1,12 @@
 [org 0x7c00]	; tell assembler that our offset is bootsector code
 
 ; the main routine makes sure the parameters are ready and then calls the function
+
+; moved HELLO bytes into bx then moved to print function (go to print function in boot_sector_print.asm)
 mov bx, HELLO
 call print
 
+; then call print_n1
 call print_n1
 
 mov bx, GOODBYE
