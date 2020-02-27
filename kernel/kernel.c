@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include "../drivers/ports.h"
+#include "../drivers/screen.h"
 
 void dummy_test_entrypoint()
 {
@@ -6,10 +8,10 @@ void dummy_test_entrypoint()
 
 void main()
 {
-        // create a pointer to a char and point it to the first text cell
-        // of video memory (o.e. the top left of the screen)
-        char* video_memory = (char*) 0xb8000;
-        // at the address pointed to by video_memory, store the character 'X'
-        // (i.e. display 'X' in the top left of the screen
-        *video_memory = 'X';
+	clear_screen();
+	kprint_at("X", 1, 6);
+	kprint_at("This text spans multiple lines", 75, 10);
+	kprint_at("There is a line\nbreak", 0, 20);
+	kprint("There is a line\nbreak");
+	kprint_at("What happens when we run out of space?", 45, 24);
 }
