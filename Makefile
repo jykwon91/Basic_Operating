@@ -1,38 +1,46 @@
-# Automatically generate lists of sources using wildcards
 C_SOURCES = $(wildcard kernel/*.c drivers/*.c)
 HEADERS = $(wildcard kernel/*.h drivers/*.h)
+# Nice syntax for file extension replacement
+OBJ = ${C_SOURCES:.c=.o}
 
-#TODO : make sources dep on all header files
+# Change this if your cross-compiler is somewhere else
+CC = /usr/local/i386elfgcc/bin/i386-elf-gcc
+GDB = /usr/local/i386elfgcc/bin/i386-elf-gdb
+# -g: Use debugging symbols in gcc
+CFLAGS = -g
 
-# convert the *.c filenames to *.o to give a list of object files to build
-OBJ = ${C_SOURCES: .c = .o}
+# First rule is run by default
+os-image.bin: boot/bootsect.bin kernel.bin
+	cat $^ > os-image.bin
 
-# Default build target
-all: os-image
-
-# this is the actual disk image that the computer loads
-# which is the combination of our compiled bootsector and kernel
-os-image: boot/boot_sector.bin kernel.bin
-	cat $^ > os-image
-
-#this builds the binary of our kernel from two object files:
-#	- the kernel_entry, which jumps to main() in our kernel
-#	- the compiled c kernel
-kernel.bin: kernel/kernel_entry.o ${OBJ}
+# '--oformat binary' deletes all symbols as a collateral, so we don't need
+# to 'strip' them manually on this case
+kernel.bin: boot/kernel_entry.o ${OBJ}
 	ld -o $@ -Ttext 0x1000 $^ --oformat binary
 
-# generic rule for compiling c code to an object file
-# for simplicity, c files depend on all header files
-%.o : %.c ${HEADERS}
-	gcc -ffreestanding -c $< -o $@
+# Used for debugging purposes
+kernel.elf: boot/kernel_entry.o ${OBJ}
+	i386-elf-ld -o $@ -Ttext 0x1000 $^ 
 
-# assemble the kernel_entry
-%.o : %.asm
-	nasm $< -f elf64 -o $@
+run: os-image.bin
+	qemu-system-i386 -fda os-image.bin
 
-%.bin : %.asm
-	nasm $< -f bin -I '../../16bit/' -o $@
+# Open the connection to qemu and load our kernel-object file with symbols
+debug: os-image.bin kernel.elf
+	qemu-system-i386 -s -fda os-image.bin &
+	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf"
+
+# Generic rules for wildcards
+# To make an object, always compile from its .c
+%.o: %.c ${HEADERS}
+	gcc ${CFLAGS} -ffreestanding -c $< -o $@
+
+%.o: %.asm
+	nasm $< -f elf -o $@
+
+%.bin: %.asm
+	nasm $< -f bin -o $@
 
 clean:
-	rm -fr *.bin *.dis *.o os-image
-	rm -fr kernel/*.o boot/*.bin drivers/*.o
+	rm -rf *.bin *.dis *.o os-image.bin *.elf
+	rm -rf kernel/*.o boot/*.bin drivers/*.o boot/*.o
