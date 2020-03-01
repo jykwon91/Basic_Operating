@@ -11,7 +11,6 @@ KERNEL_OFFSET equ 0x1000	; memory offset to load our kernel
 	call load_kernel	; read the kernel from disk
 	call switch_to_pm	; disable interrupts, load gdt, switch to protected mode
 				; which we will not return
-	jmp $			; never executed
 
 %include "boot/print.asm"
 %include "boot/print_hex.asm"
